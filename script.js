@@ -1,5 +1,56 @@
 'use strict';
 
+// ── Theme module ──────────────────────────────────
+const Theme = (() => {
+  const STORAGE_KEY = 'theme';
+  const META_COLORS  = { light: '#f8fafc', dark: '#0f172a' };
+
+  function getStoredTheme() {
+    return localStorage.getItem(STORAGE_KEY);
+  }
+
+  function getSystemTheme() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+
+    // Sync mobile browser chrome colour
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = META_COLORS[theme] ?? META_COLORS.light;
+
+    // Keep aria-pressed in sync with actual state
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.setAttribute('aria-pressed', String(theme === 'dark'));
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.dataset.theme || getSystemTheme();
+    const next = current === 'dark' ? 'light' : 'dark';
+    localStorage.setItem(STORAGE_KEY, next);
+    applyTheme(next);
+  }
+
+  // Wire up toggle button after DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.addEventListener('click', toggleTheme);
+
+    // Sync aria-pressed to the theme already applied by the inline <head> script
+    applyTheme(document.documentElement.dataset.theme || getSystemTheme());
+  });
+
+  // Follow OS preference changes only when the user has not set a manual choice
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!getStoredTheme()) {
+      applyTheme(e.matches ? 'dark' : 'light');
+    }
+  });
+
+  return { applyTheme, toggleTheme, getStoredTheme, getSystemTheme };
+})();
+
 // ── Demo credentials (front-end only) ───────────
 const DEMO = { email: 'user@example.com', password: 'Password1' };
 
